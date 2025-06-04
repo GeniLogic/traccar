@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.session.DeviceSession;
 import org.traccar.Protocol;
+import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
@@ -35,6 +36,10 @@ public class WondexProtocolDecoder extends BaseProtocolDecoder {
     public WondexProtocolDecoder(Protocol protocol) {
         super(protocol);
     }
+
+    private static final long DAY_MILLIS = 24L * 60 * 60 * 1000;
+    private static final long Y2K_OFFSET = 7168L * DAY_MILLIS;
+    private static final long Y2K_THRESHOLD = new DateBuilder().setDate(2010, 1, 1).getDate().getTime();
 
     private static final Pattern PATTERN = new PatternBuilder()
             .number("[^d]*")                     // header
@@ -100,7 +105,11 @@ public class WondexProtocolDecoder extends BaseProtocolDecoder {
             Position position = new Position(getProtocolName());
             position.setDeviceId(deviceSession.getDeviceId());
 
-            position.setTime(parser.nextDateTime());
+            Date time = parser.nextDateTime();
+            if (time.getTime() < Y2K_THRESHOLD) {
+                time = new Date(time.getTime() + Y2K_OFFSET);
+            }
+            position.setTime(time);
 
             position.setLongitude(parser.nextDouble(0));
             position.setLatitude(parser.nextDouble(0));
